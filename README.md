@@ -77,18 +77,20 @@ skhd --start-service
 ```
 # peon-wezterm-hud: global notification hotkeys
 # These mirror WezTerm's native keybindings but work system-wide.
-# The [  "WezTerm" ~ ] filter skips these when WezTerm is focused,
-# letting WezTerm's own handlers take priority (no double-fire).
+# "WezTerm" ~ passes the keypress through when WezTerm is focused.
+# * catches all other apps and runs the script.
 
 # recall recent notifications (ctrl+cmd+,)
 ctrl + cmd - 0x2B [
   "WezTerm" ~
-] : ~/.peon-wezterm-hud/scripts/peon-recall.sh
+  *           : ~/.peon-wezterm-hud/scripts/peon-recall.sh
+]
 
 # focus last alerting tab (ctrl+cmd+.)
 ctrl + cmd - 0x2F [
   "WezTerm" ~
-] : ~/.peon-wezterm-hud/scripts/peon-focus.sh
+  *           : ~/.peon-wezterm-hud/scripts/peon-focus.sh
+]
 ```
 
 3. Reload skhd:
