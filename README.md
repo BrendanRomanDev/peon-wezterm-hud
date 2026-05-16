@@ -59,12 +59,21 @@ In `tab-titles.lua`, replace `/path/to/peon-wezterm-hud` with your actual instal
 
 ### 3. Global hotkeys (optional)
 
-If you use [skhd](https://github.com/koekeishiya/skhd), add to your `skhdrc`:
+If you use [skhd](https://github.com/koekeishiya/skhd), add to your `skhdrc` to make the same hotkeys work outside WezTerm:
 
 ```
-ctrl + alt - p : ~/.peon-wezterm-hud/scripts/peon-recall.sh
-ctrl + alt - 0x2F : ~/.peon-wezterm-hud/scripts/peon-focus.sh
+# recall (ctrl+cmd+,) — skip when WezTerm is focused (it handles natively)
+ctrl + cmd - 0x2B [
+  "WezTerm" ~
+] : ~/.peon-wezterm-hud/scripts/peon-recall.sh
+
+# focus last alerting tab (ctrl+cmd+.) — skip when WezTerm is focused
+ctrl + cmd - 0x2F [
+  "WezTerm" ~
+] : ~/.peon-wezterm-hud/scripts/peon-focus.sh
 ```
+
+This gives you one set of hotkeys everywhere: when WezTerm is focused, its native handlers run. When another app is focused, skhd catches the same combo and activates WezTerm.
 
 ## Config
 
