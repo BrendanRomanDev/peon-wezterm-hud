@@ -208,20 +208,21 @@ function run(argv) {
 
   win.contentView.addSubview(hud);
 
-  // ── Accent dot (per-tab color identity) ──
-  var dotSize = 7;
-  var dotR = accentR, dotG = accentG, dotB = accentB;
+  // ── Accent bar (per-tab color identity, left edge) ──
+  var barW = 4, barInset = 8;
+  var barH = contentH - barInset * 2;
+  var barR = accentR, barG = accentG, barB = accentB;
   if (tabColorIdx >= 0) {
     var tc = tabPalette[tabColorIdx];
-    dotR = tc[0]; dotG = tc[1]; dotB = tc[2];
+    barR = tc[0]; barG = tc[1]; barB = tc[2];
   }
-  var dotView = $.NSView.alloc.initWithFrame(
-    $.NSMakeRect(padX + 10, padY + contentH / 2 - dotSize / 2, dotSize, dotSize)
+  var barView = $.NSView.alloc.initWithFrame(
+    $.NSMakeRect(padX + 6, padY + barInset, barW, barH)
   );
-  dotView.setWantsLayer(true);
-  dotView.layer.setCornerRadius(dotSize / 2);
-  dotView.layer.setBackgroundColor(cg(dotR, dotG, dotB, 1.0));
-  win.contentView.addSubview(dotView);
+  barView.setWantsLayer(true);
+  barView.layer.setCornerRadius(barW / 2);
+  barView.layer.setBackgroundColor(cg(barR, barG, barB, 0.9));
+  win.contentView.addSubview(barView);
 
   // ── Text ──
   function makeLabel(text, xPos, yPos, w, fontSize, fontName, r, g, b, alpha) {
