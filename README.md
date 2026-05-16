@@ -57,23 +57,55 @@ Merge the snippets from `wezterm-snippets/` into your `wezterm.lua`:
 
 In `tab-titles.lua`, replace `/path/to/peon-wezterm-hud` with your actual install path.
 
-### 3. Global hotkeys (optional)
+### 3. Global hotkeys (optional — recommended)
 
-If you use [skhd](https://github.com/koekeishiya/skhd), add to your `skhdrc` to make the same hotkeys work outside WezTerm:
+By default, the focus and recall hotkeys (`ctrl+cmd+.` and `ctrl+cmd+,`) only work when WezTerm is focused. If you want them to work **from any app or workspace** — e.g. you hear a notification while in your browser and want to jump straight to the right tab — you can add [skhd](https://github.com/koekeishiya/skhd) as a global hotkey layer.
+
+**Why this matters:** Without global hotkeys, you have to manually switch to WezTerm first, then use the hotkey. With skhd, the same hotkey works everywhere — it pulls WezTerm to the foreground and lands on the correct tab in one keystroke.
+
+#### Setup
+
+1. Install skhd:
+
+```bash
+brew install koekeishiya/formulae/skhd
+skhd --start-service
+```
+
+2. Create or edit `~/.config/skhd/skhdrc` and add:
 
 ```
-# recall (ctrl+cmd+,) — skip when WezTerm is focused (it handles natively)
+# peon-wezterm-hud: global notification hotkeys
+# These mirror WezTerm's native keybindings but work system-wide.
+# The [  "WezTerm" ~ ] filter skips these when WezTerm is focused,
+# letting WezTerm's own handlers take priority (no double-fire).
+
+# recall recent notifications (ctrl+cmd+,)
 ctrl + cmd - 0x2B [
   "WezTerm" ~
 ] : ~/.peon-wezterm-hud/scripts/peon-recall.sh
 
-# focus last alerting tab (ctrl+cmd+.) — skip when WezTerm is focused
+# focus last alerting tab (ctrl+cmd+.)
 ctrl + cmd - 0x2F [
   "WezTerm" ~
 ] : ~/.peon-wezterm-hud/scripts/peon-focus.sh
 ```
 
-This gives you one set of hotkeys everywhere: when WezTerm is focused, its native handlers run. When another app is focused, skhd catches the same combo and activates WezTerm.
+3. Reload skhd:
+
+```bash
+skhd --restart-service
+```
+
+#### How it works
+
+| Context | `ctrl+cmd+.` handled by | Result |
+|---------|------------------------|--------|
+| WezTerm focused | WezTerm (native) | Switches to alerting tab |
+| Any other app focused | skhd (global) | Activates WezTerm + switches to alerting tab |
+| Different macOS workspace | skhd (global) | Pulls you to WezTerm's workspace + correct tab |
+
+One set of hotkeys, zero context switching. skhd's `"WezTerm" ~` filter means the bindings are excluded when WezTerm is the frontmost app, so the native WezTerm handlers always take priority — no conflicts.
 
 ## Config
 
