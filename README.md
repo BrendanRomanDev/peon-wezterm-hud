@@ -73,12 +73,23 @@ Edit `config.json`:
 ```json
 {
   "recall_count": 5,
-  "click_activates_wezterm": true
+  "click_activates_wezterm": true,
+  "tab_palette": [
+    "#cba6f7",
+    "#89b4fa",
+    "#a6e3a1",
+    "#fab387",
+    "#f38ba8",
+    "#94e2d5",
+    "#f9e2af",
+    "#74c7ec"
+  ]
 }
 ```
 
 - `recall_count` — How many recent notifications to show on recall
 - `click_activates_wezterm` — Whether clicking a notification brings WezTerm to the foreground (set `false` to only highlight the tab without switching workspaces)
+- `tab_palette` — Array of hex colors for per-tab identity. The default is catppuccin-mocha accents. Swap these out to match your terminal theme. Both the WezTerm tab text color and the notification accent bar use this palette. Supports any number of colors (cycles when you have more tabs than colors).
 
 ## How It Works
 
@@ -89,7 +100,7 @@ Claude Code fires hook events (Stop, Notification, PermissionRequest, etc.)
     │                             |
     │                             └── mac-overlay-compact.js
     │                                   ├── resolves TTY → tab via wezterm cli
-    │                                   ├── colors accent dot by tab position
+    │                                   ├── colors accent bar by tab position (from config palette)
     │                                   └── click → peon-focus.sh → activate tab
     │
     ├── peon-alert-marker.sh → writes /tmp/peon-ping-last-alert-tty

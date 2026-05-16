@@ -1,16 +1,40 @@
--- peon-wezterm-hud: Per-tab color identity (catppuccin-mocha accents)
--- Paste this into your wezterm.lua (after `local wezterm = require("wezterm")`)
+-- peon-wezterm-hud: Per-tab color identity
+-- Reads palette from config.json. Paste into your wezterm.lua.
+-- NOTE: Set hud_config_path to your actual config.json path.
 
-local tab_palette = {
-	{ r = 0.80, g = 0.65, b = 0.97 },  -- mauve
-	{ r = 0.54, g = 0.71, b = 0.98 },  -- blue
-	{ r = 0.65, g = 0.89, b = 0.63 },  -- green
-	{ r = 0.98, g = 0.70, b = 0.53 },  -- peach
-	{ r = 0.95, g = 0.55, b = 0.66 },  -- pink
-	{ r = 0.58, g = 0.89, b = 0.83 },  -- teal
-	{ r = 0.98, g = 0.89, b = 0.69 },  -- yellow
-	{ r = 0.46, g = 0.78, b = 0.93 },  -- sapphire
-}
+local hud_config_path = os.getenv("HOME") .. "/.peon-wezterm-hud/config.json"
+
+local function load_tab_palette()
+	local defaults = { "#cba6f7", "#89b4fa", "#a6e3a1", "#fab387", "#f38ba8", "#94e2d5", "#f9e2af", "#74c7ec" }
+	local ok, result = pcall(function()
+		local f = io.open(hud_config_path, "r")
+		if not f then return defaults end
+		local content = f:read("*a")
+		f:close()
+		local palette = {}
+		for hex in content:gmatch('"(#%x%x%x%x%x%x)"') do
+			table.insert(palette, hex)
+		end
+		if #palette > 0 then return palette end
+		return defaults
+	end)
+	return ok and result or defaults
+end
+
+local function hex_to_rgb(hex)
+	hex = hex:gsub("#", "")
+	return {
+		r = tonumber(hex:sub(1, 2), 16),
+		g = tonumber(hex:sub(3, 4), 16),
+		b = tonumber(hex:sub(5, 6), 16),
+	}
+end
+
+local tab_palette_hexes = load_tab_palette()
+local tab_palette = {}
+for _, hex in ipairs(tab_palette_hexes) do
+	table.insert(tab_palette, hex_to_rgb(hex))
+end
 
 wezterm.on("format-tab-title", function(tab, tabs, panes, config, hover, max_width)
 	local idx = (tab.tab_index % #tab_palette) + 1
@@ -20,7 +44,7 @@ wezterm.on("format-tab-title", function(tab, tabs, panes, config, hover, max_wid
 		title = tab.tab_title
 	end
 	return {
-		{ Foreground = { Color = string.format("rgb(%d,%d,%d)", math.floor(c.r * 255), math.floor(c.g * 255), math.floor(c.b * 255)) } },
+		{ Foreground = { Color = string.format("rgb(%d,%d,%d)", c.r, c.g, c.b) } },
 		{ Text = " " .. title .. " " },
 	}
 end)

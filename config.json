@@ -1,4 +1,14 @@
 {
   "recall_count": 5,
-  "click_activates_wezterm": true
+  "click_activates_wezterm": true,
+  "tab_palette": [
+    "#cba6f7",
+    "#89b4fa",
+    "#a6e3a1",
+    "#fab387",
+    "#f38ba8",
+    "#94e2d5",
+    "#f9e2af",
+    "#74c7ec"
+  ]
 }

@@ -66,6 +66,7 @@ for p in panes:
     age="$(( ago / 3600 ))h ago"
   fi
 
+  HUD_DIR="$HUD_DIR" \
   PEON_CLICK_COMMAND="$HUD_DIR/scripts/peon-focus.sh" \
   osascript -l JavaScript "$OVERLAY" \
     "$tab_name" "$color" "" "$slot" "6" \

@@ -27,17 +27,28 @@ function run(argv) {
   var clickCommandValue = env.objectForKey($('PEON_CLICK_COMMAND'));
   var clickCommand = clickCommandValue && !clickCommandValue.isNil() ? ObjC.unwrap(clickCommandValue) : '';
 
-  // ── Per-tab color palette (catppuccin-mocha accents) ──
-  var tabPalette = [
-    [0.80, 0.65, 0.97],  // mauve
-    [0.54, 0.71, 0.98],  // blue
-    [0.65, 0.89, 0.63],  // green
-    [0.98, 0.70, 0.53],  // peach
-    [0.95, 0.55, 0.66],  // pink
-    [0.58, 0.89, 0.83],  // teal
-    [0.98, 0.89, 0.69],  // yellow
-    [0.46, 0.78, 0.93],  // sapphire
-  ];
+  // ── Per-tab color palette (read from config.json, fallback to catppuccin-mocha) ──
+  function hexToRgb(hex) {
+    hex = hex.replace('#', '');
+    return [parseInt(hex.substring(0,2), 16) / 255,
+            parseInt(hex.substring(2,4), 16) / 255,
+            parseInt(hex.substring(4,6), 16) / 255];
+  }
+  var defaultPalette = ['#cba6f7','#89b4fa','#a6e3a1','#fab387','#f38ba8','#94e2d5','#f9e2af','#74c7ec'];
+  var hudDirValue = env.objectForKey($('HUD_DIR'));
+  var hudDir = hudDirValue && !hudDirValue.isNil() ? ObjC.unwrap(hudDirValue) : '';
+  var paletteHexes = defaultPalette;
+  if (hudDir) {
+    try {
+      var cfgData = $.NSData.dataWithContentsOfFile($(hudDir + '/config.json'));
+      if (cfgData && !cfgData.isNil()) {
+        var cfgStr = $.NSString.alloc.initWithDataEncoding(cfgData, $.NSUTF8StringEncoding).js;
+        var cfg = JSON.parse(cfgStr);
+        if (cfg.tab_palette && cfg.tab_palette.length > 0) paletteHexes = cfg.tab_palette;
+      }
+    } catch(e) {}
+  }
+  var tabPalette = paletteHexes.map(hexToRgb);
 
   // ── Resolve WezTerm tab name + tab ID from TTY ──
   var tabName = '';
