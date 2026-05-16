@@ -2,6 +2,8 @@
 
 A WezTerm HUD layer for [peon-ping](https://github.com/anthropics/peon-ping) that adds per-tab color identity, smart tab naming, click-to-focus notifications, and notification recall.
 
+<img width="1008" height="622" alt="image" src="https://github.com/user-attachments/assets/4d249d59-1ce8-4c7c-baa6-d092d8d5ea59" />
+
 ## What You Get
 
 - **Colored tabs** — Each WezTerm tab gets a unique color from the catppuccin-mocha palette (mauve, blue, green, peach, pink, teal, yellow, sapphire)
