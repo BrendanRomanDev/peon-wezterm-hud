@@ -177,7 +177,13 @@ function run(argv) {
   win.contentView.wantsLayer = true;
 
   // ── Colors ──
-  function cg(r,g,b,a) { return $.NSColor.colorWithSRGBRedGreenBlueAlpha(r,g,b,a).CGColor; }
+  // Direct CG API instead of bridging through NSColor.CGColor. The bridge
+  // SIGKILLs on macOS Tahoe (26.x): the autoreleased CGColor from .CGColor
+  // gets reclaimed before CAShapeLayer.setFillColor can consume it, and
+  // the runtime hard-aborts. CGColorCreateGenericRGB has been in CoreGraphics
+  // since macOS 10.5, never deprecated, visually identical to sRGB on modern
+  // displays. Works on every macOS we care about.
+  function cg(r,g,b,a) { return $.CGColorCreateGenericRGB(r,g,b,a); }
 
   var inkBgCG = cg(0.08, 0.08, 0.11, 0.92);
   var glassBorderCG = cg(0.99, 0.99, 0.99, 0.08);
