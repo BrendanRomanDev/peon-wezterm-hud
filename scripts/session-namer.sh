@@ -1,10 +1,29 @@
 #!/bin/bash
 # session-namer: Sets the WezTerm tab name based on Claude Code's conversation topic.
 # Fires once per session (on first Stop event), then never again unless topic changes drastically.
+# Uses the same tabn marker file mechanism as the shell function.
 set -uo pipefail
 
-# Only fire on Stop (task complete) — that's when we have context
+# Claude Code 2.1.x passes hook data as JSON on stdin (`hook_event_name`);
+# older convention used a CLAUDE_HOOK_EVENT env var. Buffer stdin once so
+# we can both gate on the event and pass the same payload to the parsers
+# below.
+STDIN_JSON=""
+if [ ! -t 0 ]; then
+  STDIN_JSON=$(head -c 65536 2>/dev/null || true)
+fi
 event="${CLAUDE_HOOK_EVENT:-}"
+if [ -z "$event" ] && [ -n "$STDIN_JSON" ]; then
+  event=$(printf '%s' "$STDIN_JSON" | python3 -c "
+import json, sys
+try:
+    print(json.loads(sys.stdin.read()).get('hook_event_name', ''))
+except Exception:
+    pass
+" 2>/dev/null)
+fi
+
+# Only fire on Stop (task complete) — that's when we have context
 [ "$event" = "Stop" ] || exit 0
 
 # --- Tmux path: rename tmux window directly ---
@@ -12,12 +31,10 @@ if [ -n "${TMUX:-}" ]; then
   TMUX_WIN_ID=$(tmux display-message -p '#{window_id}' 2>/dev/null || true)
   SESSION_MARKER="/tmp/peon-session-named-tmux-${TMUX_WIN_ID}"
 
+  # One-shot per window
   [ -f "$SESSION_MARKER" ] && exit 0
 
-  input=""
-  if [ ! -t 0 ]; then
-    input=$(head -c 10000 2>/dev/null || true)
-  fi
+  input="$STDIN_JSON"
 
   topic=$(python3 -c "
 import json, sys
@@ -64,9 +81,11 @@ else:
 fi
 # --- End tmux path ---
 
-# Resolve WEZTERM_PANE
+# Resolve WEZTERM_PANE — hooks may not inherit it from the terminal env.
+# Walk the process tree to find the TTY, then match it to a WezTerm pane.
 PANE_ID="${WEZTERM_PANE:-}"
 if [ -z "$PANE_ID" ]; then
+  # Find our TTY by walking the process tree
   walk_pid="$PPID"
   last_tty=""
   while [ "$walk_pid" -gt 1 ] 2>/dev/null; do
@@ -76,6 +95,7 @@ if [ -z "$PANE_ID" ]; then
     fi
     walk_pid=$(ps -p "$walk_pid" -o ppid= 2>/dev/null | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' || true)
   done
+  # Match TTY to WezTerm pane
   if [ -n "$last_tty" ]; then
     PANE_ID=$(/opt/homebrew/bin/wezterm cli list --format json 2>/dev/null | python3 -c "
 import json, sys
@@ -94,12 +114,13 @@ fi
 MARKER="/tmp/wezterm-tabn-${PANE_ID}"
 SESSION_MARKER="/tmp/peon-session-named-${PANE_ID}"
 
+# If we've already named this session, skip (one-shot per pane)
 [ -f "$SESSION_MARKER" ] && exit 0
 
-input=""
-if [ ! -t 0 ]; then
-  input=$(head -c 10000 2>/dev/null || true)
-fi
+# Try to get a topic name. Strategy:
+# 1. Use the buffered hook stdin (Claude Code event data with conversation context)
+# 2. Fallback: read the WezTerm pane title (Claude Code sets this to conversation summary)
+input="$STDIN_JSON"
 
 topic=$(python3 -c "
 import json, sys, subprocess
@@ -114,6 +135,7 @@ if raw:
     except:
         pass
 
+# Strategy 1: event data
 summary = ''
 for key in ('last_assistant_message', 'message', 'transcript_summary', 'prompt_response', 'stop_ts_reason'):
     val = data.get(key, '')
@@ -121,6 +143,7 @@ for key in ('last_assistant_message', 'message', 'transcript_summary', 'prompt_r
         summary = val.strip()
         break
 
+# Strategy 2: WezTerm pane title (Claude Code sets this)
 if not summary and pane_id:
     try:
         r = subprocess.run(['/opt/homebrew/bin/wezterm', 'cli', 'list', '--format', 'json'],
@@ -129,8 +152,10 @@ if not summary and pane_id:
         for p in panes:
             if str(p.get('pane_id')) == pane_id:
                 title = p.get('title', '')
+                # Strip PeonPing markers
                 import re
                 title = re.sub(r'^[^\x20-\x7e]+\s*', '', title)
+                # Strip 'project: status' suffix
                 title = re.sub(r':\s*(done|working|ready|needs approval|question)\s*$', '', title, flags=re.I)
                 if title.strip():
                     summary = title.strip()
@@ -141,6 +166,7 @@ if not summary and pane_id:
 if not summary:
     sys.exit(1)
 
+# Trim to a clean ~30 char topic
 first_line = summary[:200].split('\n')[0].split('. ')[0]
 for prefix in ('I ', 'Let me ', 'Here ', 'OK ', 'Sure ', 'Got it', 'The ', 'This '):
     if first_line.startswith(prefix):
@@ -159,5 +185,8 @@ else:
 
 [ -z "$topic" ] && exit 0
 
+# Write the tabn marker (WezTerm's update-status handler picks this up)
 printf '%s' "$topic" > "$MARKER"
+
+# Mark this session as named so we don't overwrite
 touch "$SESSION_MARKER"
