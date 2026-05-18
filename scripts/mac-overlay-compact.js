@@ -272,7 +272,22 @@ function run(argv) {
   ObjC.registerSubclass({
     name: dhClassName, superclass: 'NSObject',
     methods: { 'handleDismiss': { types: ['void', []], implementation: function() {
-      if (clickCommand) {
+      // Preferred path: per-overlay sessionTty + HUD_DIR-resolved focus
+      // script. Per-overlay TTY > the global marker file (which only points
+      // at the latest notification), so historical recall clicks land on
+      // the originating tab instead of always jumping to the most recent.
+      // Fallback: env-var clickCommand (used by callers that don't set
+      // HUD_DIR, including the marker-based path for fresh notifications).
+      var focusScript = hudDir ? (hudDir + '/scripts/peon-focus.sh') : '';
+      if (sessionTty && focusScript) {
+        try {
+          var quotedTty = "'" + String(sessionTty).replace(/'/g, "'\\''") + "'";
+          var t = $.NSTask.alloc.init;
+          t.setLaunchPath($('/bin/bash'));
+          t.setArguments($(['-lc', "'" + focusScript.replace(/'/g, "'\\''") + "' " + quotedTty]));
+          t.launch; t.waitUntilExit;
+        } catch(e) {}
+      } else if (clickCommand) {
         try {
           var t = $.NSTask.alloc.init;
           t.setLaunchPath($('/bin/bash'));

@@ -1,15 +1,20 @@
 #!/bin/bash
-# peon-focus: Switch to the WezTerm tab/pane that last triggered a PeonPing notification.
+# peon-focus: Switch to the WezTerm tab/pane that triggered a PeonPing notification.
+# Called from a WezTerm keybinding (no args -> use global marker for most recent)
+# OR from a recall-overlay click (arg $1 = the TTY of that specific overlay).
 set -uo pipefail
+
+# shellcheck source=hud-dir.sh
 source "$(dirname "${BASH_SOURCE[0]}")/hud-dir.sh"
 
 MARKER="/tmp/peon-ping-last-alert-tty"
 
-if [ ! -f "$MARKER" ]; then
-  exit 0
+# Prefer an explicit TTY argument (passed by recall-overlay clicks); fall back
+# to the global marker file (last notification system-wide) for hotkey use.
+target_tty="${1:-}"
+if [ -z "$target_tty" ] && [ -f "$MARKER" ]; then
+  target_tty=$(cat "$MARKER" 2>/dev/null)
 fi
-
-target_tty=$(cat "$MARKER" 2>/dev/null)
 [ -z "$target_tty" ] && exit 0
 
 # Match the TTY to a WezTerm pane
