@@ -23,6 +23,19 @@ done
 
 [ -n "$last_tty" ] && printf '%s' "$last_tty" > /tmp/peon-ping-last-alert-tty 2>/dev/null
 
+# Append to recall history so ctrl+cmd+, can re-display recent notifications.
+# Format: <unix_timestamp> <tty> <notification_type>
+if [ -n "$last_tty" ]; then
+  case "$event" in
+    Stop)               ntype="complete" ;;
+    Notification)       ntype="question" ;;
+    PermissionRequest)  ntype="permission" ;;
+    PostToolUseFailure) ntype="error" ;;
+    *)                  ntype="complete" ;;
+  esac
+  printf '%s %s %s\n' "$(date +%s)" "$last_tty" "$ntype" >> /tmp/peon-ping-alert-history 2>/dev/null
+fi
+
 # If inside tmux, also write session:window for tmux-aware focus
 if [ -n "${TMUX:-}" ]; then
   tmux_target=$(tmux display-message -p '#{session_name}:#{window_index}' 2>/dev/null || true)
