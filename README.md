@@ -7,7 +7,7 @@ A WezTerm HUD layer for [peon-ping](https://github.com/anthropics/peon-ping) tha
 ## What You Get
 
 - **Colored tabs** — Each WezTerm tab gets a unique color from the catppuccin-mocha palette (mauve, blue, green, peach, pink, teal, yellow, sapphire)
-- **Smart tab titles** — Claude Code conversations auto-name tabs based on what you're working on
+- **Smart tab titles** — Claude Code conversations auto-name tabs based on what you're working on. Notification titles render as `<project> - <topic>` (e.g. `dotfiles - Understand git dirty status`)
 - **Per-tab notification dots** — The accent dot on each notification matches the originating tab's color
 - **Click-to-focus** — Click a notification to jump to WezTerm and the correct tab (even across workspaces)
 - **Notification recall** — CTRL+CMD+, to resurface recent notifications as a stack
@@ -33,7 +33,8 @@ The install script will:
 1. Symlink the custom overlay into peon-ping's scripts directory
 2. Install the `/tabn` Claude Code command
 3. Merge notification hooks into your Claude Code `settings.json`
-4. Print manual steps for WezTerm config and shell setup
+4. Point peon-ping's `notification_title_script` at `scripts/title-topic.sh` so notification titles render as `<project> - <topic>`
+5. Print manual steps for WezTerm config and shell setup
 
 ## Manual Steps (after install.sh)
 
@@ -146,11 +147,15 @@ Claude Code fires hook events (Stop, Notification, PermissionRequest, etc.)
     │                                   ├── colors accent bar by tab position (from config palette)
     │                                   └── click → peon-focus.sh → activate tab
     │
-    ├── peon-alert-marker.sh → writes /tmp/peon-ping-last-alert-tty
+    ├── peon-alert-marker.sh → writes /tmp/peon-ping-last-alert-tty + recall history
     │
-    └── session-namer.sh → extracts topic → writes /tmp/wezterm-tabn-{pane}
-                                                      |
-WezTerm update-status handler reads marker files ─────┘
+    ├── session-namer.sh → extracts topic → writes /tmp/wezterm-tabn-{pane}
+    │                                                  |
+    │  WezTerm update-status handler reads marker files┘
+    │
+    └── title-topic.sh (peon-ping notification_title_script)
+           → reads tabn marker + git/cwd → emits "<project> - <topic>"
+           → peon-ping uses this as the notification title
     ├── tabn override? → use it
     ├── Claude running? → use conversation summary
     └── fallback → cwd basename
@@ -164,10 +169,11 @@ format-tab-title handler colors tab text by position using shared palette
 scripts/
   hud-dir.sh              # Path resolver (sourced by other scripts)
   mac-overlay-compact.js   # Custom notification overlay
-  peon-alert-marker.sh     # Claude Code hook: tracks alerting tab
+  peon-alert-marker.sh     # Claude Code hook: tracks alerting tab + recall history
   peon-focus.sh            # Activate WezTerm tab + optional app focus
   peon-recall.sh           # Show recent notifications as overlay stack
   session-namer.sh         # Auto-name tabs from conversation topic
+  title-topic.sh           # peon-ping notification_title_script: "<project> - <topic>"
 wezterm-snippets/
   tab-colors.lua           # format-tab-title with catppuccin palette
   tab-titles.lua           # update-status + peon-focus/recall handlers

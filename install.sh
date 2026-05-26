@@ -6,6 +6,7 @@ set -euo pipefail
 HUD_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CLAUDE_DIR="$HOME/.claude"
 PEON_DIR="$CLAUDE_DIR/hooks/peon-ping"
+PEON_CONFIG="$PEON_DIR/config.json"
 
 echo "=== peon-wezterm-hud installer ==="
 echo "Install dir: $HUD_DIR"
@@ -100,6 +101,31 @@ with open(settings_path, 'w') as f:
 print('OK: Claude Code hooks merged into settings.json')
 "
 
+# --- Point peon-ping at title-topic.sh so tab titles show "project - topic" ---
+if [ -f "$PEON_CONFIG" ]; then
+  python3 - "$PEON_CONFIG" "$HUD_DIR/scripts/title-topic.sh" <<'PY'
+import json, sys
+cfg_path, script_path = sys.argv[1], sys.argv[2]
+with open(cfg_path) as f:
+    cfg = json.load(f)
+existing = cfg.get('notification_title_script')
+if existing == script_path:
+    print('OK: peon-ping notification_title_script already pointed at title-topic.sh')
+else:
+    cfg['notification_title_script'] = script_path
+    with open(cfg_path, 'w') as f:
+        json.dump(cfg, f, indent=2)
+    if existing:
+        print(f'OK: notification_title_script repointed (was: {existing})')
+    else:
+        print('OK: notification_title_script set to title-topic.sh')
+PY
+else
+  echo "WARN: $PEON_CONFIG not found — skipping notification_title_script wiring."
+  echo "      After peon-ping creates it, add this line manually:"
+  echo "        \"notification_title_script\": \"$HUD_DIR/scripts/title-topic.sh\""
+fi
+
 echo ""
 echo "=== Automated setup complete ==="
 echo ""
@@ -127,3 +153,7 @@ echo ""
 echo "4. Reload WezTerm config: CTRL+SHIFT+R"
 echo ""
 echo "Done! Start a Claude Code session and watch the magic."
+echo ""
+echo "Note: HUD_DIR for the overlay is auto-resolved by peon-recall.sh and"
+echo "by sourcing scripts/hud-dir.sh. If you invoke mac-overlay-compact.js"
+echo "directly outside of peon-ping/peon-recall, export HUD_DIR=$HUD_DIR first."
